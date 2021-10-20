@@ -47,3 +47,31 @@ predict_model(lightgbm)
 
 #Create a Model
 et = create_model('et')
+#trained model object is stored in the variable:"et"
+print(et)
+
+# Plot Model
+plot_model(estimator = et)
+plot_model(estimator = et, plot = 'confusion_matrix')
+plot_model(estimator = tuned_et, plot = 'feature')
+
+#Predict on test / hold-out Sample
+predict_model(et)
+
+
+#Create a Model
+catboost = create_model('catboost')
+
+# trained model object is stored in the variable:"catboost"
+
+print(catboost)
+
+# Plot Model 
+
+plot_model(estimator = catboost)
+plot_model(estimator = catboost, plot = 'confusion_matrix')
+plot_model(estimator = catboost, plot = 'feature')
+
+
+#Predict on test / hold-out Sample
+predict_model(catboost)
