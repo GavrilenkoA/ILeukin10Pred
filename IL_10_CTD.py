@@ -21,8 +21,19 @@ train = pd.read_csv('Il_10_CTD_SMOTE.csv')
 
 from pycaret.classification import *
 
-clf1 = setup (clf1 = setup (data = train,
-             target = 'Class',  train_size = 0.80, feature_selection = True, feature_selection_threshold= 0.9, feature_selection_method= 'classic',  fold =5, data_split_stratify = True, session_id=123, log_experiment=True, experiment_name='il-10_transformd_Azure'))
+clf1 = setup(
+    data=train,
+    target='Class',
+    train_size=0.80,
+    feature_selection=True,
+    feature_selection_threshold=0.9,
+    feature_selection_method='classic',
+    fold=5,
+    data_split_stratify=True,
+    session_id=123,
+    log_experiment=True,
+    experiment_name='il-10_transformd_Azure'
+)
 
 #Comparing All Models
 
@@ -66,7 +77,7 @@ catboost = create_model('catboost')
 
 print(catboost)
 
-# Plot Model 
+# Plot Model
 
 plot_model(estimator = catboost)
 plot_model(estimator = catboost, plot = 'confusion_matrix')

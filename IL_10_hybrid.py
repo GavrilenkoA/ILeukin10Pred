@@ -1,77 +1,54 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# Required packages
-
-
-import numpy as np
 import pandas as pd
-import os, sys
-from IPython.display import display
-from pycaret.utils import version
+from pycaret.classification import *
+from pycaret.utils import check_metric
 
-
-# Getting the data
-
+# 1) Данные
 train = pd.read_csv('Il_10_AZUE_Transformed_Dataset.csv')
 
+# 2) Setup без интерактива и лишних «тяжёлых» стадий
+clf1 = setup(
+    data=train,
+    target='Class',
+    train_size=0.80,
+    fold=3,                    # быстрее, чем 5–10
+    data_split_stratify=True,
+    feature_selection=False,   # отключаем дорогой FS
+    normalize=False,
+    remove_multicollinearity=False,
+    fix_imbalance=False,       # включайте только при необходимости (медленнее)
+    session_id=123,
+    silent=True,               # без input()
+    verbose=False,
+    log_experiment=False       # без MLflow и пр.
+    # use_gpu=True,            # можно включить, если есть GPU (CatBoost/XGB)
+)
 
-# Setting up Environment in PyCaret
+# 3) Сравнение только нескольких кандидатов (без полного зоопарка)
+candidates = ['lightgbm', 'catboost', 'et']  # ExtraTrees
+best = compare_models(include=candidates, sort='AUC')
 
+# 4) Обучение моделей по отдельности
+lgbm = create_model('lightgbm')
+et   = create_model('et')
+cat  = create_model('catboost')
 
-from pycaret.classification import *
+# 5) Лёгкий тюнинг LightGBM (ограничим количество итераций поиска)
+lgbm_tuned = tune_model(lgbm, optimize='AUC', choose_better=True, n_iter=15)
 
-clf1 = setup (clf1 = setup (data = train,
-             target = 'Class',  train_size = 0.80, feature_selection = True, feature_selection_threshold= 0.9, feature_selection_method= 'classic',  fold =5, data_split_stratify = True, session_id=123, log_experiment=True, experiment_name='il-10_transformd_Azure'))
+# 6) Оценка на holdout
+pred_holdout = predict_model(lgbm_tuned)
 
-#Comparing All Models
+# 7) Сохраним графики на диск (в текущую папку)
+plot_model(lgbm_tuned, plot='auc', save=True)
+plot_model(lgbm_tuned, plot='confusion_matrix', save=True)
+plot_model(lgbm_tuned, plot='feature', save=True)
 
-best = compare_models()
-
-#Create a Model 'lightgbm'
-
-lightgbm = create_model('lightgbm')
-
-#trained model object is stored in the variable:"lightgbm"
-
-print(lightgbm)
-
-#Plot a Model
-plot_model(estimator = lightgbm)#AUC
-plot_model(estimator = lightgbm, plot = 'confusion_matrix')
-plot_model(estimator = lightgbm, plot = 'feature')
-#Predict on test / hold-out Sample
-predict_model(lightgbm)
-
-
-
-#Create a Model
-et = create_model('et')
-#trained model object is stored in the variable:"et"
-print(et)
-
-# Plot Model
-plot_model(estimator = et)
-plot_model(estimator = et, plot = 'confusion_matrix')
-plot_model(estimator = tuned_et, plot = 'feature')
-
-#Predict on test / hold-out Sample
-predict_model(et)
-
-
-#Create a Model
-catboost = create_model('catboost')
-
-# trained model object is stored in the variable:"catboost"
-
-print(catboost)
-
-# Plot Model 
-
-plot_model(estimator = catboost)
-plot_model(estimator = catboost, plot = 'confusion_matrix')
-plot_model(estimator = catboost, plot = 'feature')
+# 8) Экспорт финальной модели (пикл + трансформы PyCaret)
+final = finalize_model(lgbm_tuned)
+save_model(final, 'il10_lgbm_final_pycaret23')
 
 
-#Predict on test / hold-out Sample
-predict_model(catboost)
+print("\n=== Holdout Metrics ===")
+for metric in ['Accuracy', 'AUC', 'Recall', 'Precision', 'F1', 'Kappa', 'MCC']:
+    value = check_metric(pred_holdout['Class'], pred_holdout['Label'], metric)
+    print(f"{metric:10s}: {value:.4f}")

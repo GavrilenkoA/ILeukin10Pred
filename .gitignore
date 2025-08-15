@@ -1,0 +1,6 @@
+*.png
+*.ipynb
+*.log
+mlruns/
+catboost_info/
+*.pkl
